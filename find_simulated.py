@@ -1,4 +1,5 @@
 #%%
+import json
 import itertools
 
 import numpy as np
@@ -59,6 +60,7 @@ results = []
 with futures.ThreadPoolExecutor() as executor:
     results = list(tqdm(executor.map(worker, payload), total=total_settings))
 
-
+with open('kl_settings.json', 'w') as f:
+    json.dump(results, f)
 
 # %%
