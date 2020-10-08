@@ -25,14 +25,6 @@ class FairDensity:
             for x in self.x_support:
                 z_a += math.exp(self._unnorm_log_prob(torch.Tensor(x), a))
 
-            #func = lambda *x: math.exp(self._unnorm_log_prob(x, a))
-
-            #opts = {
-            #    'epsabs': abstol,
-            #}
-            #with torch.no_grad():
-            #    z_a, _ = nquad(func, self.x_support, opts=opts)
-
             z += z_a
 
         return math.log(z)
@@ -70,9 +62,12 @@ class FairDensity:
             q_x_samples = torch.stack(q_x_samples)
 
 
-            weights = 1
-            for (m, theta, logz) in zip(self.models, self.thetas, self.logzs):
-                weights *= torch.exp(theta * m(q_x_samples) - logz)
+            if len(self.logzs) > 0:
+                weights = math.exp(-self.logzs[-1])
+            else:
+                weights = 1
+            for (m, theta) in zip(self.models, self.thetas):
+                weights *= torch.exp(theta * m(q_x_samples))
 
             p_expectation = torch.mean(torch.log(torch.sigmoid(classifier(p_x_samples))))
             q_expectation = torch.mean(torch.log(1 - torch.sigmoid(classifier(q_x_samples))) * weights)
@@ -111,3 +106,10 @@ class FairDensity:
             sample_list += xa_samples
 
         return sample_list
+
+    def get_prob_array(self):
+        probs = []
+        for x, a in itertools.product(self.x_support, self.a_domain):
+            probs.append(math.exp(self.log_prob(torch.Tensor(x), a)))
+
+        return probs

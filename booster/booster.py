@@ -1,9 +1,11 @@
 import math
 import copy
 import torch
+import itertools
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+from scipy.stats import entropy
 
 from densities.fairdensity import FairDensity
 from classifiers.utils import (accuracy, batch_weights, weighted_mean)
@@ -28,7 +30,38 @@ class BoostDensity:
         self.representation_rate = representation_rate
         self.iter_count = 0
 
-    def init_boost(self, batch_size=16, optimiser_gen=None, optimiser_settings={}, num_iter=200, num_epochs=200, early_stop=0.03): #, num_q_train=3000, num_q_test=1000):
+        self.empirical_train = []
+        self.empirical_test = []
+        
+        train_probs = {}
+        for x, a in train_p_data:
+            t_x = tuple(int(i) for i in x)
+            t_a = tuple(int(i) for i in a)
+            try:
+                train_probs[(t_x, t_a)] += 1
+            except KeyError:
+                train_probs[(t_x, t_a)] = 1
+
+        test_probs = {}
+        for x, a in test_p_data:
+            t_x = tuple(int(i) for i in x)
+            t_a = tuple(int(i) for i in a)
+            try:
+                test_probs[(t_x, t_a)] += 1
+            except KeyError:
+                test_probs[(t_x, t_a)] = 1
+
+        for x, a in itertools.product(self.q.x_support, self.q.a_domain):
+            try:
+                self.empirical_train.append(train_probs[(x, a)] / len(train_p_data))
+            except:
+                self.empirical_train.append(1e-7)
+            try:
+                self.empirical_test.append(test_probs[(x, a)] / len(test_p_data))
+            except:
+                self.empirical_test.append(1e-7)
+
+    def init_boost(self, batch_size=16, optimiser_gen=None, optimiser_settings={}, num_iter=10, num_epochs=200, early_stop=0.03): #, num_q_train=3000, num_q_test=1000):
 
         self.batch_size = batch_size
         self.num_epochs = num_epochs
@@ -37,11 +70,16 @@ class BoostDensity:
         self.optimiser_gen = optimiser_gen
         self.optimiser_settings = optimiser_settings
 
-        self.num_q_train = len(self.train_p_samples)
+        self.num_q_train = 2 * len(self.train_p_samples)
         self.num_q_test = len(self.test_p_samples)
 
         self.train_history = []
         self.boost_history = []
+
+        self.cur_train_gamma_p = 0
+        self.cur_test_gamma_p = 0
+        self.cur_train_gamma_q = 0
+        self.cur_test_gamma_q = 0
 
     def train_classifier(self, optimiser, classifier, train_p_samples, train_q_samples,
                         test_p_samples, test_q_samples):
@@ -112,15 +150,28 @@ class BoostDensity:
 
         self.q.append(
             m = trained_classifier,
-            theta = - (1 / 2) ** (self.iter_count + 1) * math.log(self.representation_rate)
+            theta = - (1 / 2) ** (self.iter_count + 1) * math.log(self.representation_rate) / math.log(2)
         )
 
-        self.iter_count += 1
+        self.cur_train_gamma_p = torch.mean(trained_classifier(torch.stack([x for (x, _) in self.train_p_samples]))).item()
+        self.cur_test_gamma_p = torch.mean(trained_classifier(torch.stack([x for (x, _) in self.test_p_samples]))).item()
+        self.cur_train_gamma_q = torch.mean(-trained_classifier(torch.stack([x for (x, _) in train_q_samples]))).item()
+        self.cur_test_gamma_q = torch.mean(-trained_classifier(torch.stack([x for (x, _) in test_q_samples]))).item()
 
     def cur_boost_statistics(self):
+        q_dist = self.q.get_prob_array()
+        train_kl = entropy(self.empirical_train, q_dist)
+        test_kl = entropy(self.empirical_test, q_dist)
+
         return {
             'iter': self.iter_count,
             'rr': self.q.representation_rate(),
+            'train_kl': train_kl,
+            'test_kl': test_kl,
+            'train_gamma_p': self.cur_train_gamma_p,
+            'test_gamma_p': self.cur_test_gamma_p,
+            'train_gamma_q': self.cur_train_gamma_q,
+            'test_gamma_q': self.cur_test_gamma_q,
         }
 
     def boost(self):
@@ -132,5 +183,6 @@ class BoostDensity:
         for _ in tqdm(range(self.num_iter)):
             self.boost_iter()
             self.boost_history.append(self.cur_boost_statistics())
+            self.iter_count += 1
 
         return self.q, self.train_history
