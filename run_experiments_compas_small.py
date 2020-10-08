@@ -60,12 +60,12 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     model = nn.Sequential(
         nn.Linear(train_x.shape[1], 20),
         nn.ReLU(),
-        nn.Linear(20, 200),
-        nn.ReLU(),
-        nn.Linear(200, 200),
-        nn.ReLU(),
-        nn.Linear(200, 20),
-        #nn.Linear(20, 20),
+        #nn.Linear(20, 200),
+        #nn.ReLU(),
+        #nn.Linear(200, 200),
+        #nn.ReLU(),
+        #nn.Linear(200, 20),
+        nn.Linear(20, 20),
         nn.ReLU(),
         nn.Linear(20, 1),
         nn.Hardtanh(min_val=-math.log(2), max_val=math.log(2))

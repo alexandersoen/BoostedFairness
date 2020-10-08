@@ -1,4 +1,5 @@
 import torch
+from scipy.integrate import nquad
 
 def classifier_wrappers(c):
     return lambda x: c(torch.Tensor(x))[0]
@@ -74,3 +75,23 @@ def all_binaries(domain_spec):
 
         bins = new_bins
     return bins
+
+def KL(p, q, x_support, a_domain, abstol=1e-3):
+    kl = 0
+    for a in a_domain:
+        def func(x):
+            x = torch.Tensor([x])
+
+            pdf_p = torch.exp(p.log_prob(x, a))
+            return pdf_p * p.log_prob(x ,a) - pdf_p * q.log_prob(x, a)
+
+        opts = {
+            'epsabs': abstol,
+        }
+
+        with torch.no_grad():
+            cur_kl, _ = nquad(func, x_support, opts=opts)
+
+        kl += cur_kl
+
+    return kl

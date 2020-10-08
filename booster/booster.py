@@ -8,21 +8,28 @@ from torch.utils.data import DataLoader
 from scipy.stats import entropy
 
 from densities.fairdensity import FairDensity
-from classifiers.utils import (accuracy, batch_weights, weighted_mean)
+from densities.fairdensitycts import FairDensityCts
+from classifiers.utils import (accuracy, batch_weights, weighted_mean, KL)
 
 def collate(batch):
     return [[torch.Tensor(b[0]), torch.Tensor(b[1]), b[2]] for b in batch]
 
+def collate_cts(batch):
+    return [[torch.Tensor(b[0]), torch.LongTensor(b[1]), b[2]] for b in batch]
+
 class BoostDensity:
 
-    def __init__(self, representation_rate, train_p_data, test_p_data, init_qs, x_support, a_domain, model, seed=1337):
+    def __init__(self, representation_rate, train_p_data, test_p_data, init_qs, x_support, a_domain, model, true_dist=None, seed=1337):
 
         self.init_qs = init_qs
         self.init_model = model
         self.cur_model = None
         self.seed = seed
 
-        self.q = FairDensity(init_qs, x_support, a_domain) 
+        if true_dist:
+            self.q = FairDensityCts(init_qs, x_support, a_domain) 
+        else:
+            self.q = FairDensity(init_qs, x_support, a_domain) 
 
         self.train_p_samples = train_p_data
         self.test_p_samples = test_p_data
@@ -30,36 +37,45 @@ class BoostDensity:
         self.representation_rate = representation_rate
         self.iter_count = 0
 
-        self.empirical_train = []
-        self.empirical_test = []
-        
-        train_probs = {}
-        for x, a in train_p_data:
-            t_x = tuple(int(i) for i in x)
-            t_a = tuple(int(i) for i in a)
-            try:
-                train_probs[(t_x, t_a)] += 1
-            except KeyError:
-                train_probs[(t_x, t_a)] = 1
+        if true_dist:
+            self.collate_fn = collate_cts
+        else:
+            self.collate_fn = collate
 
-        test_probs = {}
-        for x, a in test_p_data:
-            t_x = tuple(int(i) for i in x)
-            t_a = tuple(int(i) for i in a)
-            try:
-                test_probs[(t_x, t_a)] += 1
-            except KeyError:
-                test_probs[(t_x, t_a)] = 1
+        self.p = None
+        if true_dist:
+            self.p = true_dist
+        else:
+            self.empirical_train = []
+            self.empirical_test = []
+            
+            train_probs = {}
+            for x, a in train_p_data:
+                t_x = tuple(int(i) for i in x)
+                t_a = tuple(int(i) for i in a)
+                try:
+                    train_probs[(t_x, t_a)] += 1
+                except KeyError:
+                    train_probs[(t_x, t_a)] = 1
 
-        for x, a in itertools.product(self.q.x_support, self.q.a_domain):
-            try:
-                self.empirical_train.append(train_probs[(x, a)] / len(train_p_data))
-            except:
-                self.empirical_train.append(1e-7)
-            try:
-                self.empirical_test.append(test_probs[(x, a)] / len(test_p_data))
-            except:
-                self.empirical_test.append(1e-7)
+            test_probs = {}
+            for x, a in test_p_data:
+                t_x = tuple(int(i) for i in x)
+                t_a = tuple(int(i) for i in a)
+                try:
+                    test_probs[(t_x, t_a)] += 1
+                except KeyError:
+                    test_probs[(t_x, t_a)] = 1
+
+            for x, a in itertools.product(self.q.x_support, self.q.a_domain):
+                try:
+                    self.empirical_train.append(train_probs[(x, a)] / len(train_p_data))
+                except:
+                    self.empirical_train.append(1e-7)
+                try:
+                    self.empirical_test.append(test_probs[(x, a)] / len(test_p_data))
+                except:
+                    self.empirical_test.append(1e-7)
 
     def init_boost(self, batch_size=16, optimiser_gen=None, optimiser_settings={}, num_iter=10, num_epochs=200, early_stop=0.03): #, num_q_train=3000, num_q_test=1000):
 
@@ -98,7 +114,7 @@ class BoostDensity:
             train_weights = []
             test_weights = []
 
-            train_dataloader = DataLoader(train_samples, batch_size=self.batch_size, shuffle=True, collate_fn=collate)
+            train_dataloader = DataLoader(train_samples, batch_size=self.batch_size, shuffle=True, collate_fn=self.collate_fn)
 
             # Training
             train_ce_list = []
@@ -159,15 +175,20 @@ class BoostDensity:
         self.cur_test_gamma_q = torch.mean(-trained_classifier(torch.stack([x for (x, _) in test_q_samples]))).item()
 
     def cur_boost_statistics(self):
-        q_dist = self.q.get_prob_array()
-        train_kl = entropy(self.empirical_train, q_dist)
-        test_kl = entropy(self.empirical_test, q_dist)
+        if self.p:
+            kl = KL(self.p, self.q, self.q.x_support, self.q.a_domain)
+        else:
+            q_dist = self.q.get_prob_array()
+            train_kl = entropy(self.empirical_train, q_dist)
+            test_kl = entropy(self.empirical_test, q_dist)
+            kl = (train_kl, test_kl)
 
         return {
             'iter': self.iter_count,
             'rr': self.q.representation_rate(),
-            'train_kl': train_kl,
-            'test_kl': test_kl,
+            'kl': kl,
+#            'train_kl': train_kl,
+#            'test_kl': test_kl,
             'train_gamma_p': self.cur_train_gamma_p,
             'test_gamma_p': self.cur_test_gamma_p,
             'train_gamma_q': self.cur_train_gamma_q,
