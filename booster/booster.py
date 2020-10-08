@@ -195,13 +195,18 @@ class BoostDensity:
             'test_gamma_q': self.cur_test_gamma_q,
         }
 
-    def boost(self):
+    def boost(self, verbose=True):
 
         self.iter_count = 0
         self.boost_history.append(self.cur_boost_statistics())
         self.iter_count += 1
 
-        for _ in tqdm(range(self.num_iter)):
+        if verbose:
+            iterator = tqdm(range(self.num_iter))
+        else:
+            iterator = range(self.num_iter)
+
+        for _ in iterator:
             self.boost_iter()
             self.boost_history.append(self.cur_boost_statistics())
             self.iter_count += 1
