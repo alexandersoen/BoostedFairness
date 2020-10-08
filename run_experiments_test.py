@@ -1,14 +1,21 @@
 #%%
+import time
+import math
 import json
 import itertools
 
 import numpy as np
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import torch.distributions as D
 import concurrent.futures as futures
 
 from tqdm import tqdm
 from scipy.stats import norm
 from classifiers.utils import KL
+from booster.booster import BoostDensity
 from simulated.distribution import SimulatedDistribution
 from densities.fairdensitycts import FairDensityCts
 
@@ -20,19 +27,20 @@ NUM_SAMPLES = 5_000
 NUM_SIMS = 1000
 
 with open('kl_settings.json', 'r') as f:
-    simulate_settings = json.load(f)
+    simulated_settings = json.load(f)
 
 payload = sorted(simulated_settings, key=lambda x: -float(x['kl']))[:NUM_SIMS]
 
+total_settings = len(payload)
 
 #%%
 def worker(setting):
 
-    mu_1 = setting['mu_1']
-    mu_2 = setting['mu_2']
-    std_1 = setting['std_1']
-    std_2 = setting['std_2']
-    skew = setting['skew']
+    mu_1 = setting['setting']['mu_1']
+    mu_2 = setting['setting']['mu_2']
+    std_1 = setting['setting']['std_1']
+    std_2 = setting['setting']['std_2']
+    skew = setting['setting']['skew']
 
     d = SimulatedDistribution(mu_1, mu_2, std_1, std_2, skew)
 
@@ -84,11 +92,11 @@ def worker(setting):
         boost = BoostDensity(TAU, train_sample, test_sample, train_x_cond_a, x_support, a_domain, model, true_dist=d)
 
         #%%
-        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128)
+        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128, num_iter=5)
 
         #%%
         start = time.time()
-        boost.boost()
+        boost.boost(verbose=False)
         final = time.time()
 
         break
