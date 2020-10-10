@@ -20,12 +20,16 @@ from aif360.algorithms.preprocessing.optim_preproc_helpers.data_preproc_function
 #%%
 TAU = float(sys.argv[1])  # 0.9
 SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
+
+#%%
 DOMAIN = [1, 7, 9, 1]
 
-NAME = 'adult_{}'.format(SENSITIVE_ATTRIBUTE)
+NAME = 'adult_{}_{}.json'.format(SENSITIVE_ATTRIBUTE, TAU)
 
 dataset = load_preproc_data_adult(['sex'])
 dataset_df = dataset.convert_to_dataframe()[0]
+
+#%%
 
 from sklearn.model_selection import KFold
 
@@ -58,12 +62,12 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     model = nn.Sequential(
         nn.Linear(train_x.shape[1], 20),
         nn.ReLU(),
-        #nn.Linear(20, 200),
-        #nn.ReLU(),
-        #nn.Linear(200, 200),
-        #nn.ReLU(),
-        #nn.Linear(200, 20),
-        nn.Linear(20, 20),
+        nn.Linear(20, 200),
+        nn.ReLU(),
+        nn.Linear(200, 200),
+        nn.ReLU(),
+        nn.Linear(200, 20),
+        #nn.Linear(20, 20),
         nn.ReLU(),
         nn.Linear(20, 1),
         nn.Hardtanh(min_val=-math.log(2), max_val=math.log(2))

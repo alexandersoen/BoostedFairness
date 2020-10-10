@@ -1,8 +1,11 @@
 #%%
 import json
+import torch
 import numpy as np
 
 import matplotlib.pyplot as plt
+
+from simulated.distribution import SimulatedDistribution
 
 #%%
 taus = [0.7, 0.9]
@@ -33,9 +36,10 @@ plt.rc('ytick', labelsize='x-small')
 fig = plt.figure(figsize=(4, 3))
 ax = fig.add_subplot(1, 1, 1)
 
+idx = 19
+
 # Plot the RR
 for tau in taus:
-    idx = best_indices[tau]
 
     rrs = [[values[tau][idx]['fold_res'][i]['boost_history'][j]['rr'] for i in range(5)] for j in range(31)]
 
@@ -61,10 +65,10 @@ plt.rc('ytick', labelsize='x-small')
 fig = plt.figure(figsize=(4, 3))
 ax = fig.add_subplot(1, 1, 1)
 
+idx = 19
+
 # Plot the RR
 for tau in taus:
-    idx = best_indices[tau]
-
     kls = [[values[tau][idx]['fold_res'][i]['boost_history'][j]['kl'] for i in range(5)] for j in range(31)]
 
     error = np.array([1.96 * np.std(kls[i]) / (5**0.5) for i in range(31)])
@@ -82,3 +86,27 @@ ax.set_xlabel('Boosting Iterations')
 plt.savefig('kl_divergence.eps', bbox_inches='tight', format='eps')
 
 # %%
+idx = 19
+f_idx = 1
+cur_tau = 0.7
+
+q_init_pdf = values[cur_tau][idx]['fold_res'][f_idx]['boost_history'][0]['pdf']
+q_final_pdf = values[cur_tau][idx]['fold_res'][f_idx]['boost_history'][-1]['pdf']
+
+setting = values[cur_tau][idx]['setting']
+
+mu_1 = setting['setting']['mu_1']
+mu_2 = setting['setting']['mu_2']
+std_1 = setting['setting']['std_1']
+std_2 = setting['setting']['std_2']
+skew = setting['setting']['skew']
+
+d = SimulatedDistribution(mu_1, mu_2, std_1, std_2, skew)
+
+xs = torch.linspace(-5, 5, 1001)
+
+plt.plot(xs, torch.exp(d.log_prob(xs, torch.ones(xs.shape))) + torch.exp(d.log_prob(xs, torch.zeros(xs.shape))), c='b')
+plt.plot(xs, torch.Tensor(q_init_pdf[0]) + torch.Tensor(q_init_pdf[1]), c='orange')
+plt.plot(xs, torch.Tensor(q_final_pdf[0]) + torch.Tensor(q_final_pdf[1]), c='red')
+plt.xlim(-2.5, 2.5)
+#%%

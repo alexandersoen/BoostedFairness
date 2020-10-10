@@ -1,5 +1,6 @@
 
 #%%
+import sys
 import time
 import math
 import json
@@ -22,7 +23,7 @@ from densities.fairdensitycts import FairDensityCts
 
 from sklearn.model_selection import KFold
 
-TAU = 0.7
+TAU = float(sys.argv[1])
 NUM_SAMPLES = 5_000
 NUM_SIMS = 48
 NUM_ITERS = 30
@@ -97,7 +98,7 @@ def worker(setting):
         boost = BoostDensity(TAU, train_sample, test_sample, train_x_cond_a, x_support, a_domain, model, true_dist=d)
 
         #%%
-        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128, num_iter=NUM_ITERS, num_epochs=1, calc_pdf=True)
+        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128, num_iter=NUM_ITERS, num_epochs=200, calc_pdf=True)
 
         #%%
         start = time.time()
@@ -120,7 +121,6 @@ def worker(setting):
 results = []
 
 #%%
-
 with futures.ProcessPoolExecutor() as executor:
     results = list(tqdm(executor.map(worker, payload), total=total_settings))
 

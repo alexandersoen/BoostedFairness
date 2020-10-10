@@ -1,6 +1,7 @@
 
 #%%
 # Imports
+import sys
 import json
 import time
 import math
@@ -22,7 +23,7 @@ TAU = float(sys.argv[1])  # 0.9
 SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
 DOMAIN = [1, 3, 3, 2, 1]
 
-NAME = 'compas_small_{}'.format(SENSITIVE_ATTRIBUTE)
+NAME = 'compas_small_{}_{}.json'.format(SENSITIVE_ATTRIBUTE, TAU)
 
 dataset = load_preproc_data_compas(['sex'])
 dataset_df = dataset.convert_to_dataframe()[0]
