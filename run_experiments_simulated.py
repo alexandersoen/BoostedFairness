@@ -24,7 +24,7 @@ from sklearn.model_selection import KFold
 
 TAU = 0.7
 NUM_SAMPLES = 5_000
-NUM_SIMS = 4
+NUM_SIMS = 48
 NUM_ITERS = 30
 MAX_CPUS_PER_WORKER = 1
 
@@ -101,8 +101,8 @@ def worker(setting):
 
         #%%
         start = time.time()
-        #boost.boost(verbose=False)
-        boost.boost(verbose=True)
+        boost.boost(verbose=False)
+        #boost.boost(verbose=True)
         final = time.time()
 
         cur_fold_res.append({
@@ -124,7 +124,8 @@ results = []
 with futures.ProcessPoolExecutor() as executor:
     results = list(tqdm(executor.map(worker, payload), total=total_settings))
 
-with open('simulated_res_{}_small.json'.format(TAU), 'w') as f:
+#%%
+with open('simulated_res_{}.json'.format(TAU), 'w') as f:
     json.dump(results, f)
 
 # %%

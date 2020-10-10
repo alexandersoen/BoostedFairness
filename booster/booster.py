@@ -77,7 +77,7 @@ class BoostDensity:
                 except:
                     self.empirical_test.append(1e-7)
 
-    def init_boost(self, batch_size=16, optimiser_gen=None, optimiser_settings={}, num_iter=10, num_epochs=200, early_stop=0.03): #, num_q_train=3000, num_q_test=1000):
+    def init_boost(self, batch_size=16, optimiser_gen=None, optimiser_settings={}, num_iter=10, num_epochs=200, early_stop=0.03, calc_pdf=False): #, num_q_train=3000, num_q_test=1000):
 
         self.batch_size = batch_size
         self.num_epochs = num_epochs
@@ -85,6 +85,7 @@ class BoostDensity:
         self.early_stop = early_stop
         self.optimiser_gen = optimiser_gen
         self.optimiser_settings = optimiser_settings
+        self.calc_pdf = calc_pdf
 
         self.num_q_train = 2 * len(self.train_p_samples)
         self.num_q_test = len(self.test_p_samples)
@@ -191,7 +192,7 @@ class BoostDensity:
             cur_theta = self.q.thetas[-1]
             cur_logz = self.q.logzs[-1]
 
-        return {
+        stats = {
             'iter': self.iter_count,
             'rr': self.q.representation_rate(),
             'kl': kl,
@@ -202,6 +203,20 @@ class BoostDensity:
             'train_gamma_q': self.cur_train_gamma_q,
             'test_gamma_q': self.cur_test_gamma_q,
         }
+
+        if self.calc_pdf:
+            pdf = []
+            for i in range(len(q.a_domain)):
+                x_vals = torch.linspace(-5, 5, 1001)
+                a_vals = [q.a_domain[i] for _ in range(len(x_vals))]
+
+                probs = torch.Tensor([torch.exp(q.log_prob(x, a)) for x, a in zip(x_vals, a_vals)]).tolist()
+
+                pdf.append(probs)
+
+            stats['pdf'] = pdf
+
+        return stats
 
     def boost(self, verbose=True):
 
