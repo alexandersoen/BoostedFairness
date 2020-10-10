@@ -24,7 +24,7 @@ from sklearn.model_selection import KFold
 
 TAU = 0.7
 NUM_SAMPLES = 5_000
-NUM_SIMS = 48
+NUM_SIMS = 4
 NUM_ITERS = 30
 MAX_CPUS_PER_WORKER = 1
 
@@ -38,7 +38,7 @@ total_settings = len(payload)
 #%%
 def worker(setting):
 
-    torch.set_num_threads(MAX_CPUS_PER_WORKERS)
+    torch.set_num_threads(MAX_CPUS_PER_WORKER)
 
     mu_1 = setting['setting']['mu_1']
     mu_2 = setting['setting']['mu_2']
@@ -77,7 +77,7 @@ def worker(setting):
             nn.Linear(20, 20),
             nn.ReLU(),
             nn.Linear(20, 1),
-            nn.Hardtanh(min_val=-math.log10(2), max_val=math.log10(2))
+            nn.Hardtanh(min_val=-math.log(2), max_val=math.log(2))
         )
 
         #%%
