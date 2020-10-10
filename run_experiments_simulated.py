@@ -1,3 +1,4 @@
+
 #%%
 import time
 import math
@@ -21,11 +22,11 @@ from densities.fairdensitycts import FairDensityCts
 
 from sklearn.model_selection import KFold
 
-TAU = 0.9
-TRAIN_SPLIT = 0.7
+TAU = 0.7
 NUM_SAMPLES = 5_000
 NUM_SIMS = 48
 NUM_ITERS = 30
+MAX_THREADS_PER_WORKER = 1
 
 with open('kl_settings.json', 'r') as f:
     simulated_settings = json.load(f)
@@ -36,6 +37,8 @@ total_settings = len(payload)
 
 #%%
 def worker(setting):
+
+    torch.set_num_threads(MAX_THREADS_PER_WORKS)
 
     mu_1 = setting['setting']['mu_1']
     mu_2 = setting['setting']['mu_2']
@@ -112,9 +115,6 @@ def worker(setting):
     return {
         'setting': setting,
         'fold_res': cur_fold_res,
-        #'train_history': boost.train_history,
-        #'boost_history': boost.boost_history,
-        #'runtime': final - start,
     }
 
 results = []
@@ -124,8 +124,8 @@ results = []
 with futures.ProcessPoolExecutor() as executor:
     results = list(tqdm(executor.map(worker, payload), total=total_settings))
 
-#with open('simulated_res.json', 'w') as f:
-#    json.dump(results, f)
+with open('simulated_res_{}_small.json'.format(TAU), 'w') as f:
+    json.dump(results, f)
 
 # %%
 
