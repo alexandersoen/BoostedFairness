@@ -18,9 +18,8 @@ from aif360.algorithms.preprocessing.optim_preproc_helpers.data_preproc_function
 from aif360.datasets import CompasDataset
 
 #%%
-TAU = 0.7
-TRAIN_SPLIT = 0.7
-SENSITIVE_ATTRIBUTE = 'race'
+TAU = float(sys.argv[1])  # 0.9
+SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
 DOMAIN = [1, 3, 3, 2, 1]
 
 NAME = 'compas_small_{}'.format(SENSITIVE_ATTRIBUTE)

@@ -1,6 +1,7 @@
 
 #%%
 # Imports
+import sys
 import json
 import time
 import math
@@ -17,9 +18,8 @@ from classifiers.utils import all_binaries
 from aif360.algorithms.preprocessing.optim_preproc_helpers.data_preproc_functions import load_preproc_data_adult
 
 #%%
-TAU = 0.9
-TRAIN_SPLIT = 0.7
-SENSITIVE_ATTRIBUTE = 'sex'
+TAU = float(sys.argv[1])  # 0.9
+SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
 DOMAIN = [1, 7, 9, 1]
 
 NAME = 'adult_{}'.format(SENSITIVE_ATTRIBUTE)
