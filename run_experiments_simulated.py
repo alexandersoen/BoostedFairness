@@ -26,7 +26,7 @@ TAU = 0.7
 NUM_SAMPLES = 5_000
 NUM_SIMS = 48
 NUM_ITERS = 30
-MAX_THREADS_PER_WORKER = 1
+MAX_CPUS_PER_WORKER = 1
 
 with open('kl_settings.json', 'r') as f:
     simulated_settings = json.load(f)
@@ -38,7 +38,7 @@ total_settings = len(payload)
 #%%
 def worker(setting):
 
-    torch.set_num_threads(MAX_THREADS_PER_WORKS)
+    torch.set_num_threads(MAX_CPUS_PER_WORKERS)
 
     mu_1 = setting['setting']['mu_1']
     mu_2 = setting['setting']['mu_2']

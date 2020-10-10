@@ -183,12 +183,20 @@ class BoostDensity:
             test_kl = entropy(self.empirical_test, q_dist)
             kl = (train_kl, test_kl)
 
+        # Current Q Parameters
+        if self.iter_count < 1:
+            cur_theta = None
+            cur_logz = None
+        else:
+            cur_theta = self.q.thetas[-1]
+            cur_logz = self.q.logzs[-1]
+
         return {
             'iter': self.iter_count,
             'rr': self.q.representation_rate(),
             'kl': kl,
-            'thetas': self.q.thetas,
-            'logzs': self.q.logzs,
+            'theta': cur_theta,
+            'logz': cur_logz,
             'train_gamma_p': self.cur_train_gamma_p,
             'test_gamma_p': self.cur_test_gamma_p,
             'train_gamma_q': self.cur_train_gamma_q,
