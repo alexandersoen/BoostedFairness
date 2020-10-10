@@ -206,11 +206,11 @@ class BoostDensity:
 
         if self.calc_pdf:
             pdf = []
-            for i in range(len(q.a_domain)):
+            for i in range(len(self.q.a_domain)):
                 x_vals = torch.linspace(-5, 5, 1001)
-                a_vals = [q.a_domain[i] for _ in range(len(x_vals))]
+                a_vals = [self.q.a_domain[i] for _ in range(len(x_vals))]
 
-                probs = torch.Tensor([torch.exp(q.log_prob(x, a)) for x, a in zip(x_vals, a_vals)]).tolist()
+                probs = torch.Tensor([torch.exp(self.q.log_prob(x, a)) for x, a in zip(x_vals, a_vals)]).tolist()
 
                 pdf.append(probs)
 

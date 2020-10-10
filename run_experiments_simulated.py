@@ -97,7 +97,7 @@ def worker(setting):
         boost = BoostDensity(TAU, train_sample, test_sample, train_x_cond_a, x_support, a_domain, model, true_dist=d)
 
         #%%
-        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128, num_iter=NUM_ITERS, num_epochs=1)
+        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128, num_iter=NUM_ITERS, num_epochs=1, pdf_calc=True)
 
         #%%
         start = time.time()
