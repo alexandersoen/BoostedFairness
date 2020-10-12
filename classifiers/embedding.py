@@ -15,9 +15,9 @@ class EmbLayer(nn.Module):
         c = 0
         for i, e in zip(self.input_sizes, self.embeddings):
             if len(x.shape) < 2:
-                cur_x = torch.squeeze((x[c:c+i].long() == 1).nonzero())
+                cur_x = torch.squeeze((x[c:c+i].long() == 1).nonzero(as_tuple=False))
             else:
-                cur_x = (x[:, c:c+i].long() == 1).nonzero()[:, 1:].reshape(-1)
+                cur_x = (x[:, c:c+i].long() == 1).nonzero(as_tuple=False)[:, 1:].reshape(-1)
 
             embedded.append(e(cur_x))
             c += i
