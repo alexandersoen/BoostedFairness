@@ -29,6 +29,7 @@ EMB_SIZE = 5
 NAME = 'adult_{}_{}.json'.format(SENSITIVE_ATTRIBUTE, TAU)
 
 dataset = load_preproc_data_adult(['sex'])
+dataset_df = dataset.convert_to_dataframe()[0]
 
 #%%
 

@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 
 class EmbLayer(nn.Module):
-    def __init__(self, size):
+    def __init__(self, size, input_sizes):
         super().__init__()
-        self.embeddings = nn.ModuleList([nn.Embedding(s, size) for s in DOMAIN])
-        self.input_sizes = DOMAIN
+        self.embeddings = nn.ModuleList([nn.Embedding(s, size) for s in input_sizes])
+        self.input_sizes = input_sizes
 
     def __len__(self):
         return sum(e.embedding_dim for e in self.embeddings)
