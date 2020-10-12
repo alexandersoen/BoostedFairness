@@ -23,16 +23,25 @@ from densities.fairdensitycts import FairDensityCts
 
 from sklearn.model_selection import KFold
 
+#%%
+
 TAU = float(sys.argv[1])
+SINGLE_SIM = None
+
+#%%
+
 NUM_SAMPLES = 5_000
 NUM_SIMS = 48
-NUM_ITERS = 30
+NUM_ITERS = 10
 MAX_CPUS_PER_WORKER = 1
 
 with open('kl_settings.json', 'r') as f:
     simulated_settings = json.load(f)
 
-payload = sorted(simulated_settings, key=lambda x: -float(x['kl']))[:NUM_SIMS]
+if SINGLE_SIM:
+    payload = [sorted(simulated_settings, key=lambda x: -float(x['kl']))[19]]
+else:
+    payload = sorted(simulated_settings, key=lambda x: -float(x['kl']))[:NUM_SIMS]
 
 total_settings = len(payload)
 
@@ -90,6 +99,7 @@ def worker(setting):
         cond_0 = [a.item() for (a, b) in zip(*train_sample) if b.item() == 0]
         cond_1 = [a.item() for (a, b) in zip(*train_sample) if b.item() == 1]
         train_x_cond_a = [D.Normal(*norm.fit(cond_0)), D.Normal(*norm.fit(cond_1))]
+        #train_x_cond_a = [D.Normal(0, 1), D.Normal(0, 1)]
 
         train_sample = list(zip(*train_sample))
         test_sample = list(zip(*test_sample))
@@ -102,8 +112,8 @@ def worker(setting):
 
         #%%
         start = time.time()
-        boost.boost(verbose=False)
-        #boost.boost(verbose=True)
+        #boost.boost(verbose=False)
+        boost.boost(verbose=True)
         final = time.time()
 
         cur_fold_res.append({
@@ -125,8 +135,12 @@ with futures.ProcessPoolExecutor() as executor:
     results = list(tqdm(executor.map(worker, payload), total=total_settings))
 
 #%%
-with open('simulated_res_{}.json'.format(TAU), 'w') as f:
-    json.dump(results, f)
+if SINGLE_SIM:
+    with open('simulated_res_{}_single_{}.json'.format(TAU, SINGLE_SIM), 'w') as f:
+        json.dump(results, f)
+else:
+    with open('simulated_res_{}.json'.format(TAU), 'w') as f:
+        json.dump(results, f)
 
 # %%
 

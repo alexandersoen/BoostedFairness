@@ -77,7 +77,7 @@ class BoostDensity:
                 except:
                     self.empirical_test.append(1e-7)
 
-    def init_boost(self, batch_size=16, optimiser_gen=None, optimiser_settings={}, num_iter=10, num_epochs=200, early_stop=0.03, calc_pdf=False): #, num_q_train=3000, num_q_test=1000):
+    def init_boost(self, batch_size=16, optimiser_gen=None, optimiser_settings={}, num_iter=10, num_epochs=200, early_stop=0.03, calc_pdf=False, sr_rr=None): #, num_q_train=3000, num_q_test=1000):
 
         self.batch_size = batch_size
         self.num_epochs = num_epochs
@@ -86,6 +86,7 @@ class BoostDensity:
         self.optimiser_gen = optimiser_gen
         self.optimiser_settings = optimiser_settings
         self.calc_pdf = calc_pdf
+        self.sr_rr = sr_rr
 
         self.num_q_train = 2 * len(self.train_p_samples)
         self.num_q_test = len(self.test_p_samples)
@@ -215,6 +216,35 @@ class BoostDensity:
                 pdf.append(probs)
 
             stats['pdf'] = pdf
+
+        if self.sr_rr:
+            srs = []
+            rrs = []
+            a_probs = {}
+            for a in self.q.a_domain:
+                a_prob = 0
+                for x in self.q.x_support:
+                    a_prob += math.exp(self.q.log_prob(torch.Tensor(x), a))
+                a_probs[a] = a_prob
+
+            for indices in self.sr_rr[0]:
+                i, j = indices
+                srs.append(a_probs[self.q.a_domain[i]] / a_probs[self.q.a_domain[j]])
+                srs.append(a_probs[self.q.a_domain[j]] / a_probs[self.q.a_domain[i]])
+
+            rr_probs = []
+            for indices in self.sr_rr[1]:
+                rr_prob = 0
+                for i in indices:
+                    rr_prob += a_probs[self.q.a_domain[i]]
+
+                rr_probs.append(rr_prob)
+            
+            for r1, r2 in itertools.product(rr_probs, rr_probs):
+                rrs.append(r1 / r2)
+
+            stats['sr_rr'] = min(rrs)
+            stats['sr_sr'] = min(srs)
 
         return stats
 

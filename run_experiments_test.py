@@ -24,7 +24,8 @@ from sklearn.model_selection import KFold
 TAU = 0.9
 TRAIN_SPLIT = 0.7
 NUM_SAMPLES = 5_000
-NUM_SIMS = 1000
+NUM_SIMS = 1
+NUM_ITERS = 20
 
 with open('kl_settings.json', 'r') as f:
     simulated_settings = json.load(f)
@@ -92,7 +93,7 @@ def worker(setting):
         boost = BoostDensity(TAU, train_sample, test_sample, train_x_cond_a, x_support, a_domain, model, true_dist=d)
 
         #%%
-        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128, num_iter=5)
+        boost.init_boost(optimiser_gen=optim.Adam, batch_size=128, num_iter=NUM_ITERS)
 
         #%%
         start = time.time()
@@ -115,7 +116,7 @@ results = []
 with futures.ProcessPoolExecutor() as executor:
     results = list(tqdm(executor.map(worker, payload), total=total_settings))
 
-with open('kl_settings.json', 'w') as f:
-    json.dump(results, f)
+#with open('simulated_res.json', 'w') as f:
+#    json.dump(results, f)
 
 # %%

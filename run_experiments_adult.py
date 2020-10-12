@@ -12,6 +12,7 @@ import torch.optim as optim
 from booster.booster import BoostDensity
 from densities.empirical import EmpiricalDistribution
 from classifiers.utils import all_binaries
+from classifiers.embedding import EmbLayer
 
 #%%
 # Specify the dataset
@@ -22,12 +23,12 @@ TAU = float(sys.argv[1])  # 0.9
 SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
 
 #%%
-DOMAIN = [1, 7, 9, 1]
+DOMAIN = [2, 7, 9, 2]
+EMB_SIZE = 5
 
 NAME = 'adult_{}_{}.json'.format(SENSITIVE_ATTRIBUTE, TAU)
 
 dataset = load_preproc_data_adult(['sex'])
-dataset_df = dataset.convert_to_dataframe()[0]
 
 #%%
 
@@ -47,10 +48,12 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     nonsensitive = [c for c in train_df.columns if c != SENSITIVE_ATTRIBUTE]
 
     train_x = torch.Tensor(train_df.loc[:, nonsensitive].values)
+    train_x = torch.cat([train_x[:, 0].reshape(-1, 1), 1 - train_x[:, 0].reshape(-1, 1), train_x[:, 1:-1], train_x[:, -1].reshape(-1, 1), 1 - train_x[:, -1].reshape(-1, 1)], axis=1)
     train_a = torch.Tensor(train_df.loc[:, sensitive].values)
     train_a = torch.cat([train_a, 1 - train_a], axis=1)
     train_sample = list(zip(train_x, train_a))
 
+    test_x = torch.Tensor(test_df.loc[:, nonsensitive].values)
     test_x = torch.Tensor(test_df.loc[:, nonsensitive].values)
     test_a = torch.Tensor(test_df.loc[:, sensitive].values)
     test_a = torch.cat([test_a, 1 - test_a], axis=1)
@@ -60,14 +63,15 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     #%%
     # Models
     model = nn.Sequential(
-        nn.Linear(train_x.shape[1], 20),
+        EmbLayer(size=EMB_SIZE, input_sizes=DOMAIN),
+        nn.Linear(EMB_SIZE * len(DOMAIN), 20),
         nn.ReLU(),
-        nn.Linear(20, 200),
-        nn.ReLU(),
-        nn.Linear(200, 200),
-        nn.ReLU(),
-        nn.Linear(200, 20),
-        #nn.Linear(20, 20),
+        #nn.Linear(20, 200),
+        #nn.ReLU(),
+        #nn.Linear(200, 200),
+        #nn.ReLU(),
+        #nn.Linear(200, 20),
+        nn.Linear(20, 20),
         nn.ReLU(),
         nn.Linear(20, 1),
         nn.Hardtanh(min_val=-math.log(2), max_val=math.log(2))

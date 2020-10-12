@@ -12,6 +12,7 @@ import torch.optim as optim
 from booster.booster import BoostDensity
 from densities.empirical import EmpiricalDistribution
 from classifiers.utils import all_binaries
+from classifiers.embedding import EmbLayer
 
 #%%
 # Specify the dataset
@@ -21,13 +22,15 @@ from aif360.datasets import CompasDataset
 #%%
 TAU = float(sys.argv[1])  # 0.9
 SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
-DOMAIN = [1, 3, 3, 2, 1]
+
+#%%
+DOMAIN = [2, 3, 3, 2, 2]
+EMB_SIZE = 5
 
 NAME = 'compas_small_{}_{}.json'.format(SENSITIVE_ATTRIBUTE, TAU)
 
 dataset = load_preproc_data_compas(['sex'])
 dataset_df = dataset.convert_to_dataframe()[0]
-dataset_df = dataset_df.sample(frac=1).reset_index(drop=True)
 
 from sklearn.model_selection import KFold
 
@@ -45,26 +48,28 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     nonsensitive = [c for c in train_df.columns if c != SENSITIVE_ATTRIBUTE]
 
     train_x = torch.Tensor(train_df.loc[:, nonsensitive].values)
+    train_x = torch.cat([train_x[:, 0].reshape(-1, 1), 1 - train_x[:, 0].reshape(-1, 1), train_x[:, 1:-1], train_x[:, -1].reshape(-1, 1), 1 - train_x[:, -1].reshape(-1, 1)], axis=1)
     train_a = torch.Tensor(train_df.loc[:, sensitive].values)
     train_a = torch.cat([train_a, 1 - train_a], axis=1)
     train_sample = list(zip(train_x, train_a))
 
     test_x = torch.Tensor(test_df.loc[:, nonsensitive].values)
+    test_x = torch.cat([test_x[:, 0].reshape(-1, 1), 1 - test_x[:, 0].reshape(-1, 1), test_x[:, 1:-1], test_x[:, -1].reshape(-1, 1), 1 - test_x[:, -1].reshape(-1, 1)], axis=1)
     test_a = torch.Tensor(test_df.loc[:, sensitive].values)
     test_a = torch.cat([test_a, 1 - test_a], axis=1)
     test_sample = list(zip(test_x, test_a))
 
-
     #%%
     # Models
     model = nn.Sequential(
-        nn.Linear(train_x.shape[1], 20),
+        EmbLayer(size=EMB_SIZE, input_sizes=DOMAIN),
+        nn.Linear(EMB_SIZE * len(DOMAIN), 20),
         nn.ReLU(),
-        #nn.Linear(20, 200),
-        #nn.ReLU(),
-        #nn.Linear(200, 200),
-        #nn.ReLU(),
-        #nn.Linear(200, 20),
+#        #nn.Linear(20, 200),
+#        #nn.ReLU(),
+#        #nn.Linear(200, 200),
+#        #nn.ReLU(),
+#        #nn.Linear(200, 20),
         nn.Linear(20, 20),
         nn.ReLU(),
         nn.Linear(20, 1),
