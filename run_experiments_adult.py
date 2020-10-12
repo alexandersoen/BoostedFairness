@@ -55,7 +55,7 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     train_sample = list(zip(train_x, train_a))
 
     test_x = torch.Tensor(test_df.loc[:, nonsensitive].values)
-    test_x = torch.Tensor(test_df.loc[:, nonsensitive].values)
+    test_x = torch.cat([test_x[:, 0].reshape(-1, 1), 1 - test_x[:, 0].reshape(-1, 1), test_x[:, 1:-1], test_x[:, -1].reshape(-1, 1), 1 - test_x[:, -1].reshape(-1, 1)], axis=1)
     test_a = torch.Tensor(test_df.loc[:, sensitive].values)
     test_a = torch.cat([test_a, 1 - test_a], axis=1)
     test_sample = list(zip(test_x, test_a))
