@@ -24,7 +24,8 @@ TAU = float(sys.argv[1])  # 0.9
 SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
 
 #%%
-DOMAIN = [2, 3, 3, 2, 2]
+#DOMAIN = [2, 3, 3, 2, 2]
+DOMAIN = [1, 3, 3, 1, 1]
 EMB_SIZE = 5
 
 NAME = 'compas_small_{}_{}.json'.format(SENSITIVE_ATTRIBUTE, TAU)
@@ -44,17 +45,15 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     train_df = dataset_df.iloc[train_index]
     test_df = dataset_df.iloc[test_index]
 
-    sensitive = [c for c in train_df.columns if c == SENSITIVE_ATTRIBUTE]
-    nonsensitive = [c for c in train_df.columns if c != SENSITIVE_ATTRIBUTE]
+    sensitive = [c for c in train_df.columns if c == SENSITIVE_ATTRIBUTE or c == 'c_charge_degree=M']
+    nonsensitive = [c for c in train_df.columns if c != SENSITIVE_ATTRIBUTE and c != 'c_charge_degree=M']
 
     train_x = torch.Tensor(train_df.loc[:, nonsensitive].values)
-    train_x = torch.cat([train_x[:, 0].reshape(-1, 1), 1 - train_x[:, 0].reshape(-1, 1), train_x[:, 1:-1], train_x[:, -1].reshape(-1, 1), 1 - train_x[:, -1].reshape(-1, 1)], axis=1)
     train_a = torch.Tensor(train_df.loc[:, sensitive].values)
     train_a = torch.cat([train_a, 1 - train_a], axis=1)
     train_sample = list(zip(train_x, train_a))
 
     test_x = torch.Tensor(test_df.loc[:, nonsensitive].values)
-    test_x = torch.cat([test_x[:, 0].reshape(-1, 1), 1 - test_x[:, 0].reshape(-1, 1), test_x[:, 1:-1], test_x[:, -1].reshape(-1, 1), 1 - test_x[:, -1].reshape(-1, 1)], axis=1)
     test_a = torch.Tensor(test_df.loc[:, sensitive].values)
     test_a = torch.cat([test_a, 1 - test_a], axis=1)
     test_sample = list(zip(test_x, test_a))
@@ -62,17 +61,22 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
     #%%
     # Models
     model = nn.Sequential(
-        EmbLayer(size=EMB_SIZE, input_sizes=DOMAIN),
-        nn.Linear(EMB_SIZE * len(DOMAIN), 20),
+        nn.Linear(sum(DOMAIN), 20),
         nn.ReLU(),
-#        #nn.Linear(20, 200),
-#        #nn.ReLU(),
-#        #nn.Linear(200, 200),
-#        #nn.ReLU(),
-#        #nn.Linear(200, 20),
         nn.Linear(20, 20),
         nn.ReLU(),
         nn.Linear(20, 1),
+#        EmbLayer(size=EMB_SIZE, input_sizes=DOMAIN)),
+#        nn.Linear(EMB_SIZE * len(DOMAIN), 20),
+#        nn.ReLU(),
+#        nn.Linear(20, 200),
+#        nn.ReLU(),
+#        nn.Linear(200, 200),
+#        nn.ReLU(),
+#        nn.Linear(200, 20),
+##        nn.Linear(20, 20),
+#        nn.ReLU(),
+#        nn.Linear(20, 1),
         nn.Hardtanh(min_val=-math.log(2), max_val=math.log(2))
     )
 
