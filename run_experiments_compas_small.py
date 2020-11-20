@@ -8,6 +8,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
 
 from booster.booster import BoostDensity
 from densities.empirical import EmpiricalDistribution
