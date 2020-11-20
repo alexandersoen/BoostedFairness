@@ -57,21 +57,26 @@ def batch_weights(sample_size, batch_size):
 def weighted_mean(values, weights):
     return float(torch.sum(torch.Tensor(values) * weights))
 
-def all_binaries(domain_spec):
+def all_binaries(domain_spec, threshold=[]):
     bins = [[]]
     counter = 0
-    for spec in domain_spec:
+    for i, spec in enumerate(domain_spec):
         new_bins = []
-        
-        if spec == 1:
-            for b in bins:
-                new_bins.append(tuple(list(b) + [0]))
-                new_bins.append(tuple(list(b) + [1]))
+        if i in threshold:
+            for j in range(spec+1):
+                for b in bins:
+                    new_bins.append(tuple(list(b) + [1] * j + [0] * (spec - j)))
+
         else:
-            vals = [list([int(i) for i in t]) for t in torch.eye(spec)]
-            for b in bins:
-                for v in vals:
-                    new_bins.append(tuple(list(b) + v))
+            if spec == 1:
+                for b in bins:
+                    new_bins.append(tuple(list(b) + [0]))
+                    new_bins.append(tuple(list(b) + [1]))
+            else:
+                vals = [list([int(i) for i in t]) for t in torch.eye(spec)]
+                for b in bins:
+                    for v in vals:
+                        new_bins.append(tuple(list(b) + v))
 
         bins = new_bins
     return bins

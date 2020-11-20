@@ -1,3 +1,4 @@
+#%%
 import math
 import torch
 
@@ -6,17 +7,20 @@ from torch.distributions.uniform import Uniform
 
 class EmpiricalDistribution(Distribution):
 
-    def __init__(self, raw_samples, domain=None, baseline=0):
-
-        samples = list(tuple(int(x) for x in v) for v in raw_samples)
+    def __init__(self, raw_samples, domain=None, probs=None, baseline=0):
 
         self.domain = set(samples) if domain is None else domain
-        self.probs = {k: 0 for k in self.domain}
-        for s in samples:
-            self.probs[s] += 1
 
-        for s in self.domain:
-            self.probs[s] = (self.probs[s] + baseline) / (len(samples) + len(self.domain) * baseline)
+        if probs:
+            self.probs = probs
+        else:
+            samples = list(tuple(int(x) for x in v) for v in raw_samples)
+            self.probs = {k: 0 for k in self.domain}
+            for i, s in enumerate(samples):
+                self.probs[s] += 1
+
+            for s in self.domain:
+                self.probs[s] = (self.probs[s] + baseline) / (len(samples) + len(self.domain) * baseline)
 
     def log_prob(self, value):
         t_value = tuple(int(v) for v in value)
@@ -37,4 +41,5 @@ class EmpiricalDistribution(Distribution):
 
         ids = torch.sum(cdf_vector.repeat(n_samples, 1) < u_samples.repeat(len(cdf_vector), 1).T, axis=1)
 
-        return(torch.Tensor([val_vec[i] for i in ids]).reshape(*sample_shape, -1))
+        return (torch.Tensor([val_vec[i] for i in ids]).reshape(*sample_shape, -1))
+# %%

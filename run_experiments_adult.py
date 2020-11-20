@@ -98,7 +98,7 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
 
     #%%
     # Fair Density setup
-    x_support = all_binaries(DOMAIN)
+    x_support = all_binaries(DOMAIN, threshold=[1,2])
     a_domain = [tuple(int(v) for v in t) for t in torch.eye(train_a.shape[1])]
 
     train_x_cond_a = []

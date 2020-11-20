@@ -20,6 +20,14 @@ from aif360.algorithms.preprocessing.optim_preproc_helpers.data_preproc_function
 from aif360.datasets import CompasDataset
 
 #%%
+def interval(row):
+    i_loc = np.where(row == 1)[0]
+    if len(i_loc) > 0:
+        for i in range(i_loc[0]):
+            row[i] = 1
+    return row
+
+#%%
 TAU = float(sys.argv[1])  # 0.9
 SENSITIVE_ATTRIBUTE = str(sys.argv[2])  # 'sex'
 
@@ -32,6 +40,14 @@ NAME = 'compas_small_{}_{}.json'.format(SENSITIVE_ATTRIBUTE, TAU)
 
 dataset = load_preproc_data_compas(['sex'])
 dataset_df = dataset.convert_to_dataframe()[0]
+# 
+dataset_df = dataset_df.reindex(columns=['sex', 'race', 'age_cat=Less than 25', 'age_cat=25 to 45', 'age_cat=Greater than 45', 'priors_count=0', 'priors_count=1 to 3', 'priors_count=More than 3', 'c_charge_degree=F', 'c_charge_degree=M','two_year_recid'])
+
+del dataset_df['c_charge_degree=M']
+
+# Change to interval threholds
+dataset_df.iloc[:, 2:5] = np.apply_along_axis(interval, 1, dataset_df.iloc[:, 2:5].values)
+dataset_df.iloc[:, 5:8] = np.apply_along_axis(interval, 1, dataset_df.iloc[:, 5:8].values)
 
 from sklearn.model_selection import KFold
 
@@ -82,7 +98,7 @@ for f_idx, (train_index, test_index) in enumerate(cv.split(dataset_df)):
 
     #%%
     # Fair Density setup
-    x_support = all_binaries(DOMAIN)
+    x_support = all_binaries(DOMAIN, threshold=[1,2])
     a_domain = [tuple(int(v) for v in t) for t in torch.eye(train_a.shape[1])]
 
     train_x_cond_a = []
